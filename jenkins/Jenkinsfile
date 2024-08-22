@@ -1,4 +1,3 @@
-
 pipeline {
     agent any
 
@@ -22,7 +21,7 @@ pipeline {
                     $class: 'AmazonWebServicesCredentialsBinding',
                     credentialsId: 'aws-credentials-id'
                 ]]) {
-                    sh "aws s3 cp application.zip s3://${S3_BUCKET}/${S3_KEY}"
+                    bat "aws s3 cp application.zip s3://${S3_BUCKET}/${S3_KEY}"
                 }
             }
         }
@@ -34,12 +33,12 @@ pipeline {
                     credentialsId: 'aws-credentials-id'
                 ]]) {
                     dir('terraform') {
-                        sh 'terraform init'
-                        sh """
-                            terraform import aws_elastic_beanstalk_environment.my_env ${ENVIRONMENT_NAME} \
-                            -var 's3_bucket=${S3_BUCKET}' \
-                            -var 's3_key=${S3_KEY}' \
-                            -var 'environment_name=${ENVIRONMENT_NAME}' \
+                        bat 'terraform init'
+                        bat """
+                            terraform import aws_elastic_beanstalk_environment.my_env ${ENVIRONMENT_NAME} ^
+                            -var 's3_bucket=${S3_BUCKET}' ^
+                            -var 's3_key=${S3_KEY}' ^
+                            -var 'environment_name=${ENVIRONMENT_NAME}' ^
                             -var 'application_name=${APPLICATION_NAME}'
                             terraform apply -auto-approve
                         """
