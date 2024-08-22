@@ -22,23 +22,20 @@ variable "application_name" {
   description = "The name of the existing Elastic Beanstalk application"
 }
 
-variable "application" {
-  type = string
-  description = "The name of the Elastic Beanstalk application"
-}
-
-resource "aws_elastic_beanstalk_environment" "my_env" {
+data "aws_elastic_beanstalk_environment" "my_env" {
   name = var.environment_name
 }
 
-resource "aws_elastic_beanstalk_application" "my_app" {
-  name = var.application_name
-}
-
 resource "aws_elastic_beanstalk_application_version" "my_app_version" {
-  application = aws_elastic_beanstalk_application.my_app.name
+  application = var.application_name
   name        = "my-app-version"
   description = "My Elastic Beanstalk Application Version"
   bucket      = var.s3_bucket
   key         = var.s3_key
+}
+
+resource "aws_elastic_beanstalk_environment" "my_env_update" {
+  name            = data.aws_elastic_beanstalk_environment.my_env.name
+  version_label   = aws_elastic_beanstalk_application_version.my_app_version.name
+  wait_for_ready_timeout = "20m"
 }
