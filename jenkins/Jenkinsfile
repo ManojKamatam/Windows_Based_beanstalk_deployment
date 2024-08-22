@@ -6,7 +6,7 @@ pipeline {
         S3_KEY = 'my-app.zip'
         ENVIRONMENT_NAME = 'Sample-beanstalk-env-env'
         APPLICATION_NAME = 'Sample-beanstalk-env'
-        AWS_REGION = 'us-east-1' // Replace with your actual AWS region
+        AWS_REGION = 'us-east-1'
     }
 
     stages {
