@@ -19,20 +19,21 @@ pipeline {
         stage('Upload to S3') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id']]) {
-                    bat "aws s3 cp application.zip s3://${S3_BUCKET}/${S3_KEY}"
+                    bat "aws s3 cp application.zip s3://${S3_BUCKET}/${S3_KEY} --region ${AWS_REGION}"
                 }
             }
         }
 
-        stage('Deploy with Terraform') {
+        stage('Update Elastic Beanstalk Environment') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id']]) {
-                    dir('terraform') {
-                        bat 'terraform init'
-                        bat """
-                            terraform apply -auto-approve -var s3_bucket=${S3_BUCKET} -var s3_key=${S3_KEY} -var environment_name=${ENVIRONMENT_NAME} -var application_name=${APPLICATION_NAME}
-                        """
-                    }
+                    bat """
+                        aws elasticbeanstalk update-environment \
+                          --application-name ${APPLICATION_NAME} \
+                          --environment-name ${ENVIRONMENT_NAME} \
+                          --version-label my-app-version \
+                          --region ${AWS_REGION}
+                    """
                 }
             }
         }
