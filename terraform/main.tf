@@ -4,22 +4,18 @@ provider "aws" {
 
 variable "s3_bucket" {
   type = string
-  description = "The S3 bucket to store the application version"
 }
 
 variable "s3_key" {
   type = string
-  description = "The S3 key for the application version"
 }
 
 variable "environment_name" {
   type = string
-  description = "The name of the existing Elastic Beanstalk environment"
 }
 
 variable "application_name" {
   type = string
-  description = "The name of the existing Elastic Beanstalk application"
 }
 
 data "aws_elastic_beanstalk_environment" "my_env" {
