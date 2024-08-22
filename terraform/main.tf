@@ -18,10 +18,6 @@ variable "application_name" {
   type = string
 }
 
-data "aws_elastic_beanstalk_environment" "my_env" {
-  name = var.environment_name
-}
-
 resource "aws_elastic_beanstalk_application_version" "my_app_version" {
   application = var.application_name
   name        = "my-app-version"
@@ -31,8 +27,8 @@ resource "aws_elastic_beanstalk_application_version" "my_app_version" {
 }
 
 resource "aws_elastic_beanstalk_environment" "my_env_update" {
-  environment_id = data.aws_elastic_beanstalk_environment.my_env.id
-  application   = var.application_name
+  name            = var.environment_name
+  application     = var.application_name
   version_label   = aws_elastic_beanstalk_application_version.my_app_version.name
   wait_for_ready_timeout = "20m"
 }
