@@ -35,8 +35,8 @@ pipeline {
                     dir('terraform') {
                         bat 'terraform init'
                         bat """
-                            aws elasticbeanstalk describe-environments --environment-names ${ENVIRONMENT_NAME} --query 'Environments[0].EnvironmentId' > environment_id.txt
-                            terraform import aws_elastic_beanstalk_environment.my_env $(cat environment_id.txt)
+                            aws elasticbeanstalk describe-environments --environment-names \${ENVIRONMENT_NAME} --query 'Environments[0].EnvironmentId' > environment_id.txt
+                            terraform import aws_elastic_beanstalk_environment.my_env \$(cat environment_id.txt)
                             terraform apply -auto-approve
                         """
                     }
