@@ -12,16 +12,13 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/ManojKamatam/Beanstalk_Deployemt.git', branch: 'main'
+                git url: 'https://github.com/ManojKamatam/Windows_Based_beanstalk_deployment.git', branch: 'main'
             }
         }
         
         stage('Upload to S3') {
             steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-credentials-id'
-                ]]) {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id']]) {
                     bat "aws s3 cp application.zip s3://${S3_BUCKET}/${S3_KEY}"
                 }
             }
@@ -29,10 +26,7 @@ pipeline {
 
         stage('Deploy with Terraform') {
             steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-credentials-id'
-                ]]) {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id']]) {
                     dir('terraform') {
                         bat 'terraform init'
                         bat """
