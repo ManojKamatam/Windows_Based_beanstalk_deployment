@@ -36,9 +36,9 @@ pipeline {
                     dir('terraform') {
                         bat 'terraform init'
                         bat """
-                            aws elasticbeanstalk describe-environments --region ${AWS_REGION} --environment-names \${ENVIRONMENT_NAME} --query 'Environments[0].EnvironmentId' > environment_id.txt
-                            terraform import aws_elastic_beanstalk_environment.my_env \$(cat environment_id.txt) \$(cat environment_id.txt)
-                            terraform apply -auto-approve -var s3_bucket=${S3_BUCKET} -var s3_key=${S3_KEY} -var environment_name=${ENVIRONMENT_NAME} -var application_name=${APPLICATION_NAME}
+                            aws elasticbeanstalk describe-environments --region ${AWS_REGION} --environment-names ${ENVIRONMENT_NAME} --query 'Environments[0].EnvironmentId' > environment_id.txt
+                            terraform import aws_elastic_beanstalk_environment.my_env aws_elastic_beanstalk_environment.my_env/$(cat environment_id.txt)
+                            terraform apply -auto-approve -var s3_bucket=${S3_BUCKET} -var s3_key=${S3_KEY} -var environment_name=${ENVIRONMENT_NAME} -var application_name=${APPLICATION_NAME} -var application=aws_elastic_beanstalk_application.my_app
                         """
                     }
                 }
