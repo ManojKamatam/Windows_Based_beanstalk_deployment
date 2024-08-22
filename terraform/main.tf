@@ -22,6 +22,11 @@ variable "application_name" {
   description = "The name of the existing Elastic Beanstalk application"
 }
 
+variable "application" {
+  type = string
+  description = "The name of the Elastic Beanstalk application"
+}
+
 resource "aws_elastic_beanstalk_environment" "my_env" {
   name = var.environment_name
 }
