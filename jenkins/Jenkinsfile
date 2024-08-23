@@ -7,6 +7,7 @@ pipeline {
         ENVIRONMENT_NAME = 'Windowsbasedpythonapplication-env'
         APPLICATION_NAME = 'windows_based_python_application'
         AWS_REGION = 'us-east-1'
+        VERSION_LABEL = "app-version-${BUILD_NUMBER}"  // Unique version label using Jenkins build number
     }
 
     stages {
@@ -24,6 +25,22 @@ pipeline {
             }
         }
 
+        stage('Deploy Application Version') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id']]) {
+                    dir('terraform') {
+                        sh """
+                            terraform apply -auto-approve \
+                            -var 's3_bucket=${S3_BUCKET}' \
+                            -var 's3_key=${S3_KEY}' \
+                            -var 'application_name=${APPLICATION_NAME}' \
+                            -var 'version_label=${VERSION_LABEL}'
+                        """
+                    }
+                }
+            }
+        }
+
         stage('Update Elastic Beanstalk Environment') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id']]) {
@@ -31,7 +48,7 @@ pipeline {
                         aws elasticbeanstalk update-environment \
                           --application-name ${APPLICATION_NAME} \
                           --environment-name ${ENVIRONMENT_NAME} \
-                          --version-label my-app-version \
+                          --version-label ${VERSION_LABEL} \
                           --region ${AWS_REGION}
                     """
                 }
