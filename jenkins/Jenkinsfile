@@ -29,7 +29,7 @@ pipeline {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id']]) {
                     dir('terraform') {
-                        sh """
+                        bat """
                             terraform apply -auto-approve \
                             -var 's3_bucket=${S3_BUCKET}' \
                             -var 's3_key=${S3_KEY}' \
