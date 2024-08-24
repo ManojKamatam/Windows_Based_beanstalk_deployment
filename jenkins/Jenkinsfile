@@ -15,16 +15,16 @@ pipeline {
         stage('Retrieve AWS Credentials from Secrets Manager') {
             steps {
                 script {
-                    // Retrieve the secret as plain text (JSON object)
                     def secretValue = powershell(script: "aws secretsmanager get-secret-value --secret-id ${SECRET_NAME} --query 'SecretString' --output text --region ${AWS_REGION}", returnStdout: true).trim()
                     
-                    // Parse the JSON to get the key-value pair
-                    def jsonSlurper = new groovy.json.JsonSlurper()
-                    def credentials = jsonSlurper.parseText(secretValue)
+                    // Parse the plain text to extract credentials
+                    def credentials = secretValue.replaceAll("[{}\"]", "").split(":")
+                    def awsAccessKeyId = credentials[0].trim()
+                    def awsSecretAccessKey = credentials[1].trim()
 
-                    // Extract the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
-                    env.AWS_ACCESS_KEY_ID = credentials.keySet().iterator().next()  // The key (AWS_ACCESS_KEY_ID)
-                    env.AWS_SECRET_ACCESS_KEY = credentials[env.AWS_ACCESS_KEY_ID]  // The value (AWS_SECRET_ACCESS_KEY)
+                    // Set environment variables for AWS credentials
+                    env.AWS_ACCESS_KEY_ID = awsAccessKeyId
+                    env.AWS_SECRET_ACCESS_KEY = awsSecretAccessKey
                 }
             }
         }
