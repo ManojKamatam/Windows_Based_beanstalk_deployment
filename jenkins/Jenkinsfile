@@ -27,12 +27,16 @@ pipeline {
                             def jsonSlurper = new groovy.json.JsonSlurper()
                             def credentials = jsonSlurper.parseText(secretValue)
 
-                            // Set the AWS credentials explicitly for Windows
+                            // Print the credentials for debugging (Remove this in production)
+                            echo "Parsed Secret: ${credentials}"
+
+                            // Extract the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
                             env.AWS_ACCESS_KEY_ID = credentials.keySet().iterator().next()
                             env.AWS_SECRET_ACCESS_KEY = credentials[env.AWS_ACCESS_KEY_ID]
 
-                            // Print debug information (remove this in production)
-                            echo "Using AWS_ACCESS_KEY_ID: ${env.AWS_ACCESS_KEY_ID}"
+                            // Print the extracted values for debugging
+                            echo "AWS_ACCESS_KEY_ID: ${env.AWS_ACCESS_KEY_ID}"
+                            echo "AWS_SECRET_ACCESS_KEY: ${env.AWS_SECRET_ACCESS_KEY}"
 
                         } catch (Exception e) {
                             echo "Failed to parse the secret: ${e.message}"
