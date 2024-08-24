@@ -16,10 +16,15 @@ pipeline {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id']]) {
                     script {
-                        // Execute the command and capture the raw output
-                        def secretValue = bat(script: "aws secretsmanager get-secret-value --secret-id ${SECRET_NAME} --query 'SecretString' --output text --region ${AWS_REGION}", returnStdout: true).trim()
+                        // Execute the AWS CLI command and capture the raw output
+                        def secretValue = bat(
+                            script: """
+                                aws secretsmanager get-secret-value --secret-id ${SECRET_NAME} --query SecretString --output text --region ${AWS_REGION}
+                            """,
+                            returnStdout: true
+                        ).trim()
 
-                        // Log the full command output for debugging
+                        // Log the raw output
                         echo "Full command output: ${secretValue}"
 
                         try {
@@ -33,8 +38,9 @@ pipeline {
 
                             echo "Extracted AWS_ACCESS_KEY_ID: ${env.AWS_ACCESS_KEY_ID}"
                         } catch (Exception e) {
-                            // Log the error
+                            // Log the error with more details
                             echo "Failed to parse the secret: ${e.message}"
+                            echo "Check the secret format and ensure it's correct."
                             error("Error in secret retrieval and parsing")
                         }
                     }
