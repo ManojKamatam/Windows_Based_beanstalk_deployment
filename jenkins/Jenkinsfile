@@ -7,7 +7,7 @@ pipeline {
         ENVIRONMENT_NAME = 'Linux-based-web-application-env'
         APPLICATION_NAME = 'linux-based-web-application'
         AWS_REGION = 'us-east-1'
-        SECRET_NAME = 'secret-jenkins-access'  // Replace with your actual secret name
+        SECRET_NAME = 'secret-jenkins-access'
         VERSION_LABEL = "app-version-${BUILD_NUMBER}"
     }
 
@@ -15,8 +15,14 @@ pipeline {
         stage('Retrieve AWS Credentials from Secrets Manager') {
             steps {
                 script {
-                    def secretValue = powershell(script: "aws secretsmanager get-secret-value --secret-id ${SECRET_NAME} --query 'SecretString' --output text --region ${AWS_REGION}", returnStdout: true).trim()
+                    // Retrieve the secret as plain text
+                    def secretValue = powershell(script: """
+                        aws secretsmanager get-secret-value --secret-id ${SECRET_NAME} --query 'SecretString' --output text --region ${AWS_REGION}
+                    """, returnStdout: true).trim()
                     
+                    // Print the secret value for debugging (ensure no sensitive data is exposed in logs)
+                    echo "Retrieved secret value: ${secretValue}"
+
                     // Parse the plain text to extract credentials
                     def credentials = secretValue.replaceAll("[{}\"]", "").split(":")
                     def awsAccessKeyId = credentials[0].trim()
@@ -25,6 +31,9 @@ pipeline {
                     // Set environment variables for AWS credentials
                     env.AWS_ACCESS_KEY_ID = awsAccessKeyId
                     env.AWS_SECRET_ACCESS_KEY = awsSecretAccessKey
+
+                    // Print environment variables for debugging (ensure no sensitive data is exposed)
+                    echo "AWS_ACCESS_KEY_ID: ${env.AWS_ACCESS_KEY_ID}"
                 }
             }
         }
@@ -37,17 +46,19 @@ pipeline {
         
         stage('Upload to S3') {
             steps {
-                bat "aws s3 cp application.zip s3://${S3_BUCKET}/${S3_KEY} --region ${AWS_REGION}"
+                bat """
+                    aws s3 cp application.zip s3://${S3_BUCKET}/${S3_KEY} --region ${AWS_REGION}
+                """
             }
         }
 
         stage('Create Application Version') {
             steps {
                 bat """
-                    aws elasticbeanstalk create-application-version \
-                    --application-name ${APPLICATION_NAME} \
-                    --version-label ${VERSION_LABEL} \
-                    --source-bundle S3Bucket=${S3_BUCKET},S3Key=${S3_KEY} \
+                    aws elasticbeanstalk create-application-version ^
+                    --application-name ${APPLICATION_NAME} ^
+                    --version-label ${VERSION_LABEL} ^
+                    --source-bundle S3Bucket=${S3_BUCKET},S3Key=${S3_KEY} ^
                     --region ${AWS_REGION}
                 """
             }
@@ -56,11 +67,11 @@ pipeline {
         stage('Update Elastic Beanstalk Environment') {
             steps {
                 bat """
-                    aws elasticbeanstalk update-environment \
-                      --application-name ${APPLICATION_NAME} \
-                      --environment-name ${ENVIRONMENT_NAME} \
-                      --version-label ${VERSION_LABEL} \
-                      --region ${AWS_REGION}
+                    aws elasticbeanstalk update-environment ^
+                    --application-name ${APPLICATION_NAME} ^
+                    --environment-name ${ENVIRONMENT_NAME} ^
+                    --version-label ${VERSION_LABEL} ^
+                    --region ${AWS_REGION}
                 """
             }
         }
