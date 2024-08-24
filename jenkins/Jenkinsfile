@@ -14,26 +14,28 @@ pipeline {
     stages {
         stage('Retrieve AWS Credentials from Secrets Manager') {
             steps {
-                script {
-                    // Retrieve the secret as plain text
-                    def secretValue = powershell(script: """
-                        aws secretsmanager get-secret-value --secret-id ${SECRET_NAME} --query 'SecretString' --output text --region ${AWS_REGION}
-                    """, returnStdout: true).trim()
-                    
-                    // Print the secret value for debugging (ensure no sensitive data is exposed in logs)
-                    echo "Retrieved secret value: ${secretValue}"
+                withCredentials([string(credentialsId: 'aws-credentials', variable: 'AWS_CREDENTIALS')]) {
+                    script {
+                        // Retrieve the secret as plain text
+                        def secretValue = powershell(script: """
+                            aws secretsmanager get-secret-value --secret-id ${SECRET_NAME} --query 'SecretString' --output text --region ${AWS_REGION}
+                        """, returnStdout: true).trim()
+                        
+                        // Print the secret value for debugging (ensure no sensitive data is exposed in logs)
+                        echo "Retrieved secret value: ${secretValue}"
 
-                    // Parse the plain text to extract credentials
-                    def credentials = secretValue.replaceAll("[{}\"]", "").split(":")
-                    def awsAccessKeyId = credentials[0].trim()
-                    def awsSecretAccessKey = credentials[1].trim()
+                        // Parse the plain text to extract credentials
+                        def credentials = secretValue.replaceAll("[{}\"]", "").split(":")
+                        def awsAccessKeyId = credentials[0].trim()
+                        def awsSecretAccessKey = credentials[1].trim()
 
-                    // Set environment variables for AWS credentials
-                    env.AWS_ACCESS_KEY_ID = awsAccessKeyId
-                    env.AWS_SECRET_ACCESS_KEY = awsSecretAccessKey
+                        // Set environment variables for AWS credentials
+                        env.AWS_ACCESS_KEY_ID = awsAccessKeyId
+                        env.AWS_SECRET_ACCESS_KEY = awsSecretAccessKey
 
-                    // Print environment variables for debugging (ensure no sensitive data is exposed)
-                    echo "AWS_ACCESS_KEY_ID: ${env.AWS_ACCESS_KEY_ID}"
+                        // Print environment variables for debugging (ensure no sensitive data is exposed)
+                        echo "AWS_ACCESS_KEY_ID: ${env.AWS_ACCESS_KEY_ID}"
+                    }
                 }
             }
         }
