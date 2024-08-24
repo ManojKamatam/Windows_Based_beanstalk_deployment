@@ -27,16 +27,20 @@ pipeline {
                     // Extract the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
                     env.AWS_ACCESS_KEY_ID = credentials.keySet().iterator().next()  // The key (AWS_ACCESS_KEY_ID)
                     env.AWS_SECRET_ACCESS_KEY = credentials[env.AWS_ACCESS_KEY_ID]  // The value (AWS_SECRET_ACCESS_KEY)
+
+                    // Set AWS CLI environment variables
+                    env.AWS_ACCESS_KEY_ID = credentials.keySet().iterator().next()
+                    env.AWS_SECRET_ACCESS_KEY = credentials[env.AWS_ACCESS_KEY_ID]
                 }
             }
         }
 
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/ManojKamatam/Beanstalk_Deployments_maintainingVersions-SecretManager.git', branch: 'main'
+                git url: 'https://github.com/ManojKamatam/Windows_Based_beanstalk_deployment.git', branch: 'main'
             }
         }
-        
+
         stage('Upload to S3') {
             steps {
                 bat "aws s3 cp application.zip s3://%S3_BUCKET%/%S3_KEY% --region %AWS_REGION%"
