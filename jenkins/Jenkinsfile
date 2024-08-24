@@ -12,26 +12,28 @@ pipeline {
     }
 
     stages {
-        stage('Retrieve AWS Credentials from Secrets Manager') {
+        stage('Retrieve AWS Credentials from Jenkins Credentials') {
             steps {
-                script {
-                    // Retrieve the secret as plain text (JSON object)
-                    def secretValue = bat(script: "aws secretsmanager get-secret-value --secret-id ${SECRET_NAME} --query \"SecretString\" --output text --region ${AWS_REGION}", returnStdout: true).trim()
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id']]) {
+                    script {
+                        // Retrieve the secret as plain text (JSON object)
+                        def secretValue = bat(script: "aws secretsmanager get-secret-value --secret-id ${SECRET_NAME} --query \"SecretString\" --output text --region ${AWS_REGION}", returnStdout: true).trim()
 
-                    // Parse the JSON to get the key-value pair
-                    def jsonSlurper = new groovy.json.JsonSlurper()
-                    def credentials = jsonSlurper.parseText(secretValue)
+                        // Parse the JSON to get the key-value pair
+                        def jsonSlurper = new groovy.json.JsonSlurper()
+                        def credentials = jsonSlurper.parseText(secretValue)
 
-                    // Extract the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
-                    env.AWS_ACCESS_KEY_ID = credentials.keySet().iterator().next()  // The key (AWS_ACCESS_KEY_ID)
-                    env.AWS_SECRET_ACCESS_KEY = credentials[env.AWS_ACCESS_KEY_ID]  // The value (AWS_SECRET_ACCESS_KEY)
+                        // Extract the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+                        env.AWS_ACCESS_KEY_ID = credentials.keySet().iterator().next()  // The key (AWS_ACCESS_KEY_ID)
+                        env.AWS_SECRET_ACCESS_KEY = credentials[env.AWS_ACCESS_KEY_ID]  // The value (AWS_SECRET_ACCESS_KEY)
+                    }
                 }
             }
         }
 
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/ManojKamatam/Windows_Based_beanstalk_deployment.git', branch: 'main'
+                git url: 'https://github.com/ManojKamatam/Beanstalk_Deployments_maintainingVersions-SecretManager.git', branch: 'main'
             }
         }
 
