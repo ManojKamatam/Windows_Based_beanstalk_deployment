@@ -8,7 +8,7 @@ pipeline {
         APPLICATION_NAME = 'linux-based-web-application'
         AWS_REGION = 'us-east-1'
         SECRET_NAME = 'secret-jenkins-access'  // Replace with your actual secret name
-        VERSION_LABEL = "app-version-${BUILD_NUMBER}"  // Unique version label using Jenkins build number
+        VERSION_LABEL = "app-version-${BUILD_NUMBER}"
     }
 
     stages {
@@ -31,33 +31,25 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/ManojKamatam/Beanstalk_Deployemt.git', branch: 'main'
+                git url: 'https://github.com/ManojKamatam/Beanstalk_Deployments_maintainingVersions-SecretManager.git', branch: 'main'
             }
         }
-
+        
         stage('Upload to S3') {
             steps {
                 bat "aws s3 cp application.zip s3://${S3_BUCKET}/${S3_KEY} --region ${AWS_REGION}"
             }
         }
 
-        stage('Deploy Application Version with Terraform') {
+        stage('Create Application Version') {
             steps {
-                script {
-                    // Set AWS credentials as environment variables for Terraform
-                    withEnv(["AWS_ACCESS_KEY_ID=${env.AWS_ACCESS_KEY_ID}", "AWS_SECRET_ACCESS_KEY=${env.AWS_SECRET_ACCESS_KEY}"]) {
-                        dir('terraform') {
-                            bat """
-                                terraform init
-                                terraform apply -auto-approve \
-                                -var 's3_bucket=${S3_BUCKET}' \
-                                -var 's3_key=${S3_KEY}' \
-                                -var 'application_name=${APPLICATION_NAME}' \
-                                -var 'version_label=${VERSION_LABEL}'
-                            """
-                        }
-                    }
-                }
+                bat """
+                    aws elasticbeanstalk create-application-version \
+                    --application-name ${APPLICATION_NAME} \
+                    --version-label ${VERSION_LABEL} \
+                    --source-bundle S3Bucket=${S3_BUCKET},S3Key=${S3_KEY} \
+                    --region ${AWS_REGION}
+                """
             }
         }
 
