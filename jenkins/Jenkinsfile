@@ -4,38 +4,58 @@ pipeline {
     environment {
         S3_BUCKET = 'my-s3-bucket-for-jenkins-pipeline-setup'
         S3_KEY = 'my-app.zip'
-        ENVIRONMENT_NAME = 'Windowsbasedpythonapplication-env'
-        APPLICATION_NAME = 'windows_based_python_application'
+        ENVIRONMENT_NAME = 'Linux-based-web-application-env'
+        APPLICATION_NAME = 'linux-based-web-application'
         AWS_REGION = 'us-east-1'
+        SECRET_NAME = 'secret-jenkins-access'  // Replace with your actual secret name
         VERSION_LABEL = "app-version-${BUILD_NUMBER}"  // Unique version label using Jenkins build number
     }
 
     stages {
-        stage('Checkout') {
+        stage('Retrieve AWS Credentials from Secrets Manager') {
             steps {
-                git url: 'https://github.com/ManojKamatam/Windows_Based_beanstalk_deployment.git', branch: 'main'
-            }
-        }
-        
-        stage('Upload to S3') {
-            steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id']]) {
-                    bat "aws s3 cp application.zip s3://${S3_BUCKET}/${S3_KEY} --region ${AWS_REGION}"
+                script {
+                    // Retrieve the secret as plain text (JSON object)
+                    def secretValue = sh(script: "aws secretsmanager get-secret-value --secret-id ${SECRET_NAME} --query 'SecretString' --output text --region ${AWS_REGION}", returnStdout: true).trim()
+                    
+                    // Parse the JSON to get the key-value pair
+                    def jsonSlurper = new groovy.json.JsonSlurper()
+                    def credentials = jsonSlurper.parseText(secretValue)
+
+                    // Extract the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+                    env.AWS_ACCESS_KEY_ID = credentials.keySet().iterator().next()  // The key (AWS_ACCESS_KEY_ID)
+                    env.AWS_SECRET_ACCESS_KEY = credentials[env.AWS_ACCESS_KEY_ID]  // The value (AWS_SECRET_ACCESS_KEY)
                 }
             }
         }
 
-        stage('Deploy Application Version') {
+        stage('Checkout') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id']]) {
-                    dir('terraform') {
-                        bat """
-                            terraform apply -auto-approve \
-                            -var 's3_bucket=${S3_BUCKET}' \
-                            -var 's3_key=${S3_KEY}' \
-                            -var 'application_name=${APPLICATION_NAME}' \
-                            -var 'version_label=${VERSION_LABEL}'
-                        """
+                git url: 'https://github.com/ManojKamatam/Beanstalk_Deployemt.git', branch: 'main'
+            }
+        }
+
+        stage('Upload to S3') {
+            steps {
+                bat "aws s3 cp application.zip s3://${S3_BUCKET}/${S3_KEY} --region ${AWS_REGION}"
+            }
+        }
+
+        stage('Deploy Application Version with Terraform') {
+            steps {
+                script {
+                    // Set AWS credentials as environment variables for Terraform
+                    withEnv(["AWS_ACCESS_KEY_ID=${env.AWS_ACCESS_KEY_ID}", "AWS_SECRET_ACCESS_KEY=${env.AWS_SECRET_ACCESS_KEY}"]) {
+                        dir('terraform') {
+                            bat """
+                                terraform init
+                                terraform apply -auto-approve \
+                                -var 's3_bucket=${S3_BUCKET}' \
+                                -var 's3_key=${S3_KEY}' \
+                                -var 'application_name=${APPLICATION_NAME}' \
+                                -var 'version_label=${VERSION_LABEL}'
+                            """
+                        }
                     }
                 }
             }
@@ -43,15 +63,13 @@ pipeline {
 
         stage('Update Elastic Beanstalk Environment') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id']]) {
-                    bat """
-                        aws elasticbeanstalk update-environment \
-                          --application-name ${APPLICATION_NAME} \
-                          --environment-name ${ENVIRONMENT_NAME} \
-                          --version-label ${VERSION_LABEL} \
-                          --region ${AWS_REGION}
-                    """
-                }
+                bat """
+                    aws elasticbeanstalk update-environment \
+                      --application-name ${APPLICATION_NAME} \
+                      --environment-name ${ENVIRONMENT_NAME} \
+                      --version-label ${VERSION_LABEL} \
+                      --region ${AWS_REGION}
+                """
             }
         }
     }
