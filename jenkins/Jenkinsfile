@@ -34,10 +34,6 @@ pipeline {
                         } else {
                             error("Failed to extract AWS credentials from secret.")
                         }
-
-                        // Print the extracted values for debugging (ensure to remove this in production)
-                        echo "AWS_ACCESS_KEY_ID: ${env.AWS_ACCESS_KEY_ID}"
-                        echo "AWS_SECRET_ACCESS_KEY: ${env.AWS_SECRET_ACCESS_KEY}"
                     }
                 }
             }
