@@ -16,7 +16,7 @@ pipeline {
             steps {
                 script {
                     // Retrieve the secret as plain text (JSON object)
-                    def secretValue = sh(script: "aws secretsmanager get-secret-value --secret-id ${SECRET_NAME} --query 'SecretString' --output text --region ${AWS_REGION}", returnStdout: true).trim()
+                    def secretValue = bat(script: "aws secretsmanager get-secret-value --secret-id ${SECRET_NAME} --query 'SecretString' --output text --region ${AWS_REGION}", returnStdout: true).trim()
                     
                     // Parse the JSON to get the key-value pair
                     def jsonSlurper = new groovy.json.JsonSlurper()
