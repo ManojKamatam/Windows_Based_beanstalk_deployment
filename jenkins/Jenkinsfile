@@ -12,19 +12,18 @@ pipeline {
     }
 
     stages {
-        stage('Retrieve AWS Credentials from Jenkins Credentials') {
+        stage('Retrieve AWS Credentials from Secrets Manager') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id']]) {
                     script {
-                        // Execute the AWS CLI command and capture the raw output
-                        def secretValue = bat(
+                        // Use PowerShell to retrieve and handle the secret
+                        def secretValue = powershell(
                             script: """
-                                aws secretsmanager get-secret-value --secret-id ${SECRET_NAME} --query SecretString --output text --region ${AWS_REGION}
+                                aws secretsmanager get-secret-value --secret-id ${SECRET_NAME} --query 'SecretString' --output text --region ${AWS_REGION}
                             """,
                             returnStdout: true
                         ).trim()
 
-                        // Log the raw output
                         echo "Full command output: ${secretValue}"
 
                         try {
@@ -38,7 +37,6 @@ pipeline {
 
                             echo "Extracted AWS_ACCESS_KEY_ID: ${env.AWS_ACCESS_KEY_ID}"
                         } catch (Exception e) {
-                            // Log the error with more details
                             echo "Failed to parse the secret: ${e.message}"
                             echo "Check the secret format and ensure it's correct."
                             error("Error in secret retrieval and parsing")
