@@ -16,7 +16,6 @@ pipeline {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id']]) {
                     script {
-                        // Use PowerShell to retrieve and handle the secret
                         def secretValue = powershell(
                             script: """
                                 aws secretsmanager get-secret-value --secret-id ${SECRET_NAME} --query 'SecretString' --output text --region ${AWS_REGION}
@@ -25,13 +24,15 @@ pipeline {
                         ).trim()
 
                         try {
-                            // Parse the JSON output
                             def jsonSlurper = new groovy.json.JsonSlurper()
                             def credentials = jsonSlurper.parseText(secretValue)
 
-                            // Extract the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+                            // Set the AWS credentials explicitly for Windows
                             env.AWS_ACCESS_KEY_ID = credentials.keySet().iterator().next()
                             env.AWS_SECRET_ACCESS_KEY = credentials[env.AWS_ACCESS_KEY_ID]
+
+                            // Print debug information (remove this in production)
+                            echo "Using AWS_ACCESS_KEY_ID: ${env.AWS_ACCESS_KEY_ID}"
 
                         } catch (Exception e) {
                             echo "Failed to parse the secret: ${e.message}"
