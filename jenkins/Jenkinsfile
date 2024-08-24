@@ -7,8 +7,8 @@ pipeline {
         ENVIRONMENT_NAME = 'Linux-based-web-application-env'
         APPLICATION_NAME = 'linux-based-web-application'
         AWS_REGION = 'us-east-1'
-        VERSION_LABEL = "app-version-${BUILD_NUMBER}"  // Define VERSION_LABEL here
-        SECRET_NAME = 'secret-jenkins-access'  // Replace with your actual secret name
+        VERSION_LABEL = "app-version-${BUILD_NUMBER}"
+        SECRET_NAME = 'secret-jenkins-access'
     }
 
     stages {
@@ -16,21 +16,27 @@ pipeline {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id']]) {
                     script {
-                        // Retrieve the secret as plain text (JSON object)
+                        // Execute the command and capture the raw output
                         def secretValue = bat(script: "aws secretsmanager get-secret-value --secret-id ${SECRET_NAME} --query 'SecretString' --output text --region ${AWS_REGION}", returnStdout: true).trim()
 
-                        // Log the raw output to inspect it
-                        echo "Raw secret value: ${secretValue}"
+                        // Log the full command output for debugging
+                        echo "Full command output: ${secretValue}"
 
-                        // Parse the JSON to get the key-value pair
-                        def jsonSlurper = new groovy.json.JsonSlurper()
-                        def credentials = jsonSlurper.parseText(secretValue)
+                        try {
+                            // Parse the JSON output
+                            def jsonSlurper = new groovy.json.JsonSlurper()
+                            def credentials = jsonSlurper.parseText(secretValue)
 
-                        // Since the secret is a single key-value pair, extract them
-                        env.AWS_ACCESS_KEY_ID = credentials.keySet().iterator().next()  // The key (AWS_ACCESS_KEY_ID)
-                        env.AWS_SECRET_ACCESS_KEY = credentials[env.AWS_ACCESS_KEY_ID]  // The value (AWS_SECRET_ACCESS_KEY)
+                            // Extract the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+                            env.AWS_ACCESS_KEY_ID = credentials.keySet().iterator().next()
+                            env.AWS_SECRET_ACCESS_KEY = credentials[env.AWS_ACCESS_KEY_ID]
 
-                        echo "Extracted AWS_ACCESS_KEY_ID: ${env.AWS_ACCESS_KEY_ID}"
+                            echo "Extracted AWS_ACCESS_KEY_ID: ${env.AWS_ACCESS_KEY_ID}"
+                        } catch (Exception e) {
+                            // Log the error
+                            echo "Failed to parse the secret: ${e.message}"
+                            error("Error in secret retrieval and parsing")
+                        }
                     }
                 }
             }
@@ -64,10 +70,10 @@ pipeline {
             steps {
                 bat """
                     aws elasticbeanstalk update-environment ^
-                      --application-name ${APPLICATION_NAME} ^
-                      --environment-name ${ENVIRONMENT_NAME} ^
-                      --version-label ${VERSION_LABEL} ^
-                      --region ${AWS_REGION}
+                    --application-name ${APPLICATION_NAME} ^
+                    --environment-name ${ENVIRONMENT_NAME} ^
+                    --version-label ${VERSION_LABEL} ^
+                    --region ${AWS_REGION}
                 """
             }
         }
