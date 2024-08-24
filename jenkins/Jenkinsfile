@@ -16,6 +16,7 @@ pipeline {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id']]) {
                     script {
+                        // Use PowerShell to retrieve the plain text secret
                         def secretValue = powershell(
                             script: """
                                 aws secretsmanager get-secret-value --secret-id ${SECRET_NAME} --query 'SecretString' --output text --region ${AWS_REGION}
@@ -23,25 +24,14 @@ pipeline {
                             returnStdout: true
                         ).trim()
 
-                        try {
-                            def jsonSlurper = new groovy.json.JsonSlurper()
-                            def credentials = jsonSlurper.parseText(secretValue)
+                        // Since the secret is plain text, split it to extract the keys
+                        def secretParts = secretValue.split(":")
+                        env.AWS_ACCESS_KEY_ID = secretParts[0].replaceAll('[\\[\\]]', '') // Remove square brackets if present
+                        env.AWS_SECRET_ACCESS_KEY = secretParts[1].replaceAll('[\\[\\]]', '') // Remove square brackets if present
 
-                            // Print the credentials for debugging (Remove this in production)
-                            echo "Parsed Secret: ${credentials}"
-
-                            // Extract the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
-                            env.AWS_ACCESS_KEY_ID = credentials.keySet().iterator().next()
-                            env.AWS_SECRET_ACCESS_KEY = credentials[env.AWS_ACCESS_KEY_ID]
-
-                            // Print the extracted values for debugging
-                            echo "AWS_ACCESS_KEY_ID: ${env.AWS_ACCESS_KEY_ID}"
-                            echo "AWS_SECRET_ACCESS_KEY: ${env.AWS_SECRET_ACCESS_KEY}"
-
-                        } catch (Exception e) {
-                            echo "Failed to parse the secret: ${e.message}"
-                            error("Error in secret retrieval and parsing")
-                        }
+                        // Print the extracted values for debugging (ensure to remove this in production)
+                        echo "AWS_ACCESS_KEY_ID: ${env.AWS_ACCESS_KEY_ID}"
+                        echo "AWS_SECRET_ACCESS_KEY: ${env.AWS_SECRET_ACCESS_KEY}"
                     }
                 }
             }
