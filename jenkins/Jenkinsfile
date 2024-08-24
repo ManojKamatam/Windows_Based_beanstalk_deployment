@@ -17,15 +17,20 @@ pipeline {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials-id']]) {
                     script {
                         // Retrieve the secret as plain text (JSON object)
-                        def secretValue = bat(script: "aws secretsmanager get-secret-value --secret-id ${SECRET_NAME} --query \"SecretString\" --output text --region ${AWS_REGION}", returnStdout: true).trim()
+                        def secretValue = bat(script: "aws secretsmanager get-secret-value --secret-id ${SECRET_NAME} --query 'SecretString' --output text --region ${AWS_REGION}", returnStdout: true).trim()
+
+                        // Log the raw output to inspect it
+                        echo "Raw secret value: ${secretValue}"
 
                         // Parse the JSON to get the key-value pair
                         def jsonSlurper = new groovy.json.JsonSlurper()
                         def credentials = jsonSlurper.parseText(secretValue)
 
-                        // Extract the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+                        // Since the secret is a single key-value pair, extract them
                         env.AWS_ACCESS_KEY_ID = credentials.keySet().iterator().next()  // The key (AWS_ACCESS_KEY_ID)
                         env.AWS_SECRET_ACCESS_KEY = credentials[env.AWS_ACCESS_KEY_ID]  // The value (AWS_SECRET_ACCESS_KEY)
+
+                        echo "Extracted AWS_ACCESS_KEY_ID: ${env.AWS_ACCESS_KEY_ID}"
                     }
                 }
             }
@@ -33,7 +38,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/ManojKamatam/Beanstalk_Deployments_maintainingVersions-SecretManager.git', branch: 'main'
+                git url: 'https://github.com/ManojKamatam/Windows_Based_beanstalk_deployment.git', branch: 'main'
             }
         }
 
