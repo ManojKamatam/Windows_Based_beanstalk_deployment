@@ -4,8 +4,8 @@ pipeline {
     environment {
         S3_BUCKET = 'my-s3-bucket-for-jenkins-pipeline-setup'
         S3_KEY = 'my-app.zip'
-        ENVIRONMENT_NAME = 'Linux-based-web-application-env'
-        APPLICATION_NAME = 'linux-based-web-application'
+        ENVIRONMENT_NAME = 'Windows-based-web-application-env'
+        APPLICATION_NAME = 'windows-based-web-application'
         AWS_REGION = 'us-east-1'
         SECRET_NAME = 'secret-jenkins-access'  // Replace with your actual secret name
         VERSION_LABEL = "app-version-${BUILD_NUMBER}"
@@ -15,18 +15,16 @@ pipeline {
         stage('Retrieve AWS Credentials from Secrets Manager') {
             steps {
                 script {
-                    // Retrieve the secret from AWS Secrets Manager
-                    def secretValue = bat(script: """
-                        aws secretsmanager get-secret-value --secret-id ${SECRET_NAME} --query 'SecretString' --output text --region ${AWS_REGION}
-                    """, returnStdout: true).trim()
+                    // Retrieve the secret as plain text (JSON object)
+                    def secretValue = bat(script: "aws secretsmanager get-secret-value --secret-id ${SECRET_NAME} --query 'SecretString' --output text --region ${AWS_REGION}", returnStdout: true).trim()
                     
                     // Parse the JSON to get the key-value pair
                     def jsonSlurper = new groovy.json.JsonSlurper()
                     def credentials = jsonSlurper.parseText(secretValue)
 
-                    // Extract the AWS credentials
-                    env.AWS_ACCESS_KEY_ID = credentials.AWS_ACCESS_KEY_ID
-                    env.AWS_SECRET_ACCESS_KEY = credentials.AWS_SECRET_ACCESS_KEY
+                    // Extract the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+                    env.AWS_ACCESS_KEY_ID = credentials.keySet().iterator().next()  // The key (AWS_ACCESS_KEY_ID)
+                    env.AWS_SECRET_ACCESS_KEY = credentials[env.AWS_ACCESS_KEY_ID]  // The value (AWS_SECRET_ACCESS_KEY)
                 }
             }
         }
@@ -39,9 +37,7 @@ pipeline {
         
         stage('Upload to S3') {
             steps {
-                bat """
-                    aws s3 cp application.zip s3://${S3_BUCKET}/${S3_KEY} --region ${AWS_REGION} --access-key ${env.AWS_ACCESS_KEY_ID} --secret-key ${env.AWS_SECRET_ACCESS_KEY}
-                """
+                bat "aws s3 cp application.zip s3://${S3_BUCKET}/${S3_KEY} --region ${AWS_REGION}"
             }
         }
 
@@ -52,9 +48,7 @@ pipeline {
                     --application-name ${APPLICATION_NAME} ^
                     --version-label ${VERSION_LABEL} ^
                     --source-bundle S3Bucket=${S3_BUCKET},S3Key=${S3_KEY} ^
-                    --region ${AWS_REGION} ^
-                    --access-key ${env.AWS_ACCESS_KEY_ID} ^
-                    --secret-key ${env.AWS_SECRET_ACCESS_KEY}
+                    --region ${AWS_REGION}
                 """
             }
         }
@@ -66,9 +60,7 @@ pipeline {
                       --application-name ${APPLICATION_NAME} ^
                       --environment-name ${ENVIRONMENT_NAME} ^
                       --version-label ${VERSION_LABEL} ^
-                      --region ${AWS_REGION} ^
-                      --access-key ${env.AWS_ACCESS_KEY_ID} ^
-                      --secret-key ${env.AWS_SECRET_ACCESS_KEY}
+                      --region ${AWS_REGION}
                 """
             }
         }
